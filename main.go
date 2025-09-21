@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/digitalstraw/retry-go/re"
-	"github.com/digitalstraw/retry-go/re/user"
+	"github.com/digitalstraw/retry-go/re/example"
 )
 
 var attempts = 0
@@ -58,7 +58,7 @@ func main() {
 	fmt.Println("Start time=", start)
 	fmt.Println("Timout time=", start.Add(5*time.Second))
 
-	customPolicy := user.Custom()
+	customPolicy := example.Custom()
 
 	expectedSleeps := []time.Duration{
 		customPolicy.SleepDuration(1, 0),

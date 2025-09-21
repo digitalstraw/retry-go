@@ -67,7 +67,7 @@ func Custom() *CustomPolicy {
 
 func (c *CustomPolicy) SleepDuration(attempt int, _ time.Duration) time.Duration {
 	c.failures++
-	return c.Interval + time.Duration(attempt)*2*time.Second // Custom logic: increase sleep by 100ms each attempt
+	return c.Interval + time.Duration(attempt)*2*time.Second // Custom logic 
 }
 
 func (c *CustomPolicy) Failures() int {
