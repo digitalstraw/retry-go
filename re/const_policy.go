@@ -2,8 +2,12 @@ package re
 
 import "time"
 
+const (
+	defaultConstTimeout = 30 * time.Second
+)
+
 type ConstPolicy struct {
-	*TryBasePolicy
+	*Policy
 }
 
 var _ TryPolicy = (*ConstPolicy)(nil)
@@ -13,11 +17,10 @@ var _ TryPolicy = (*ConstPolicy)(nil)
 func Const() *ConstPolicy {
 	interval := 1 * time.Second
 	cp := &ConstPolicy{}
-	cp.TryBasePolicy = &TryBasePolicy{
-		Interval:    interval,
-		MaxInterval: interval,
-		StopAt:      StopAt(defaultConstTimeout),
-		Self:        cp,
+	cp.Policy = &Policy{
+		Interval: interval,
+		StopAt:   time.Now().Add(defaultConstTimeout),
+		Self:     cp,
 	}
 	return cp
 }

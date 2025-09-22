@@ -4,14 +4,10 @@ import (
 	"time"
 )
 
-const (
-	defaultConstTimeout = 30 * time.Second
-	defaultMaxInterval  = 60 * time.Second
-)
-
 type TryPolicy interface {
 	SleepDuration(attempt int, previousSleep time.Duration) time.Duration
 	Continue() bool
+	WithFactor(factor int64) TryPolicy
 	WithInterval(interval time.Duration) TryPolicy
 	WithMaxInterval(interval time.Duration) TryPolicy
 	WithTimeout(timeout time.Duration) TryPolicy
@@ -45,36 +41,38 @@ func Try[T any](fn func() (T, error), rp ...TryPolicy) (T, error) {
 	return zero, err
 }
 
-type TryBasePolicy struct {
+type Policy struct {
 	Interval    time.Duration
 	MaxInterval time.Duration
+	Factor      int64
 	StopAt      time.Time
 	Self        TryPolicy
 }
 
-func StopAt(dur time.Duration) time.Time {
-	return time.Now().Add(dur)
+func (b *Policy) WithFactor(factor int64) TryPolicy {
+	b.Factor = factor
+	return b.Self
 }
 
-func (b *TryBasePolicy) WithInterval(interval time.Duration) TryPolicy {
+func (b *Policy) WithInterval(interval time.Duration) TryPolicy {
 	b.Interval = interval
 	return b.Self
 }
 
-func (b *TryBasePolicy) WithMaxInterval(interval time.Duration) TryPolicy {
+func (b *Policy) WithMaxInterval(interval time.Duration) TryPolicy {
 	b.MaxInterval = interval
 	return b.Self
 }
 
-func (b *TryBasePolicy) WithTimeout(timeout time.Duration) TryPolicy {
-	b.StopAt = StopAt(timeout)
+func (b *Policy) WithTimeout(timeout time.Duration) TryPolicy {
+	b.StopAt = time.Now().Add(timeout)
 	return b.Self
 }
 
-func (b *TryBasePolicy) SleepDuration(_ int, _ time.Duration) time.Duration {
+func (b *Policy) SleepDuration(_ int, _ time.Duration) time.Duration {
 	return b.Interval
 }
 
-func (b *TryBasePolicy) Continue() bool {
+func (b *Policy) Continue() bool {
 	return time.Now().Before(b.StopAt)
 }

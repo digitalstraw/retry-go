@@ -1,5 +1,0 @@
-#!/bin/bash
-
-go fmt ./...
-gofmt -w .
-golangci-lint run --fix --build-tags "tests"

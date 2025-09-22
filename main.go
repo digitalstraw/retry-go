@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/digitalstraw/retry-go/example"
 	"github.com/digitalstraw/retry-go/re"
-	"github.com/digitalstraw/retry-go/re/example"
 )
 
 var attempts = 0
@@ -19,6 +19,7 @@ func okFunc() (int, error) {
 	fmt.Println("okFunc succeeded on attempt", attempts, ".")
 	return 42, nil
 }
+
 func failFunc() (int, error) {
 	fmt.Println("failFunc failed. Will wait 2s from", time.Now())
 	return 0, errors.New("expected error")
@@ -72,5 +73,13 @@ func main() {
 		panic("Unexpected error: " + err.Error())
 	}
 	fmt.Println("End time=", time.Now())
-	fmt.Println("okFunc() succeeded with result", i, "after", time.Since(start), "and", customPolicy.Failures(), "failures.")
+	fmt.Println(
+		"okFunc() succeeded with result",
+		i,
+		"after",
+		time.Since(start),
+		"and",
+		customPolicy.Failures(),
+		"failures.",
+	)
 }
