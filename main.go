@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -26,9 +27,11 @@ func failFunc() (int, error) {
 }
 
 func main() {
+	ctx := context.Background()
+
 	// Try default policy (Const) with ok result
 	fmt.Println("--- okFunc() on default ConstPolicy --- ")
-	i, err := re.Try(okFunc)
+	i, err := re.Try(ctx, okFunc)
 	if err != nil {
 		panic("Unexpected error: " + err.Error())
 	}
@@ -43,7 +46,7 @@ func main() {
 	fmt.Println("Start time=", start)
 	fmt.Println("Timout time=", start.Add(5*time.Second))
 
-	i, err = re.Try(failFunc, re.Const().WithInterval(2*time.Second).WithTimeout(5*time.Second))
+	i, err = re.Try(ctx, failFunc, re.Const().WithInterval(2*time.Second).WithTimeout(5*time.Second))
 	if err != nil {
 		fmt.Println("End time=", time.Now())
 		fmt.Println("failFunc() failed with", err.Error(), "after", time.Since(start))
@@ -68,7 +71,7 @@ func main() {
 
 	fmt.Println("Expected sleeps:", expectedSleeps)
 
-	i, err = re.Try(okFunc, customPolicy)
+	i, err = re.Try(ctx, okFunc, customPolicy)
 	if err != nil {
 		panic("Unexpected error: " + err.Error())
 	}

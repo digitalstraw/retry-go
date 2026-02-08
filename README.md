@@ -17,7 +17,7 @@ The function accepts two parameters:
 If no retry policy is specified, `re.Const()` is used by default, with a 30-second timeout and a 1-second interval between attempts.
 
 ```go
-db, err := re.Try(func() (*sql.DB, error) {
+db, err := re.Try(ctx, func() (*sql.DB, error) {
     return sql.Open("mysql", dsn)
 })
 ```
@@ -29,7 +29,7 @@ The `Backoff` policy in its default configuration has a 2-minute timeout with a 
 fn := func() (*sql.DB, error) {
     return sql.Open("mysql", dsn)
 }
-db, err := re.Try(fn, re.Backoff())
+db, err := re.Try(ctx, fn, re.Backoff())
 ```
 
 ## Fully Customized Backoff Retry Policy
@@ -38,7 +38,7 @@ fn := func() (*sql.DB, error) {
     return sql.Open("mysql", dsn)
 }
 // Genrates the following sleep durations: 100ms, 300ms, 900ms, 2.7s, 8.1s, 24.3s, 60s, 60s, ...
-db, err := re.Try(fn, re.Backoff().WithFactor(3).WithInterval(100*time.Millisecond).WithMaxInterval(60*time.Second).WithTimeout(5*time.Minute))
+db, err := re.Try(ctx, fn, re.Backoff().WithFactor(3).WithInterval(100*time.Millisecond).WithMaxInterval(60*time.Second).WithTimeout(5*time.Minute))
 ```
 
 # Custom Retry Policies
@@ -84,10 +84,14 @@ func (c *CustomPolicy) Failures() int {
 fn := func() (*sql.DB, error) {
     return sql.Open("mysql", dsn)
 }
-db, err := re.Try(fn, Custom().WithTimeout(1*time.Minute))
+db, err := re.Try(ctx, fn, Custom().WithTimeout(1*time.Minute))
 ```
 
-
+# How to Run Linter
+To run the linter, use the following command in the terminal:
+```bash
+golangci-lint run --fix --build-tags=tests
+```
 
 
 # Contributing
@@ -98,3 +102,14 @@ Contributions are welcome! Please open an issue or submit a pull request on GitH
 # License
 This code is licensed under the MIT License. See the LICENSE file for details.
 
+# Changelog
+- **v1.0.0** 
+  - Added context parameter to `Try()` function. 
+  - Immediate reaction to context cancellation implemented. 
+  - `re.Sleep(ctx, duration)` function added to support context-aware sleeping.
+  - Improved processing when timeout is reached: 
+    - We run `fn` one last time before the timeout. 
+    - This ensures the final sleep period isn't wasted, especially in Backoff scenarios where that last wait could be long.
+
+- **v0.0.1** 
+  - Initial release with basic retry functionality and default policies.
