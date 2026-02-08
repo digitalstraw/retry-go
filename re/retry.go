@@ -1,6 +1,7 @@
 package re
 
 import (
+	"context"
 	"time"
 )
 
@@ -15,7 +16,7 @@ type TryPolicy interface {
 
 // Try - from app called as `re.Try(fn)` retries the given function until it succeeds or time is exceeded.
 // TryPolicy specifies how waiting is processed and the timeout.
-func Try[T any](fn func() (T, error), rp ...TryPolicy) (T, error) {
+func Try[T any](ctx context.Context, fn func() (T, error), rp ...TryPolicy) (T, error) {
 	var zero T
 	var err error
 	var result T
@@ -25,17 +26,26 @@ func Try[T any](fn func() (T, error), rp ...TryPolicy) (T, error) {
 	}
 	policy := rp[0] // only the first policy is used to make this argument optional
 	attempt := 0
+	toSleep := time.Duration(0)
 	lastSleep := time.Duration(0)
 
 	for policy.Continue() {
+		if toSleep > 0 {
+			err = Sleep(ctx, toSleep)
+			if err != nil {
+				return zero, err
+			}
+			lastSleep = toSleep
+		}
+		if ctx.Err() != nil {
+			return zero, ctx.Err()
+		}
 		attempt++
 		result, err = fn()
 		if err == nil {
 			return result, nil
 		}
-		toSleep := policy.SleepDuration(attempt, lastSleep)
-		time.Sleep(toSleep)
-		lastSleep = toSleep
+		toSleep = policy.SleepDuration(attempt, lastSleep)
 	}
 
 	return zero, err
@@ -75,4 +85,17 @@ func (b *Policy) SleepDuration(_ int, _ time.Duration) time.Duration {
 
 func (b *Policy) Continue() bool {
 	return time.Now().Before(b.StopAt)
+}
+
+// Sleep pauses the current goroutine until d has passed or the context is canceled—whichever happens first.
+func Sleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

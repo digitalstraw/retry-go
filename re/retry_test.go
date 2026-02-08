@@ -1,6 +1,7 @@
 package re
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -96,7 +97,7 @@ func (s *RetryTestSuite) TestConstantRetry() {
 	startTime := time.Now()
 
 	// ACT
-	result, err := Try(fn, Const().WithInterval(50*time.Millisecond).WithTimeout(160*time.Millisecond))
+	result, err := Try(context.Background(), fn, Const().WithInterval(50*time.Millisecond).WithTimeout(160*time.Millisecond))
 
 	// ASSERT
 	s.Require().NoError(err)
@@ -115,7 +116,7 @@ func (s *RetryTestSuite) TestBackoffRetry() {
 	startTime := time.Now()
 
 	// ACT
-	result, err := Try(fn, Backoff().WithInterval(10*time.Millisecond).WithTimeout(100*time.Millisecond))
+	result, err := Try(context.Background(), fn, Backoff().WithInterval(10*time.Millisecond).WithTimeout(100*time.Millisecond))
 
 	// ASSERT
 	s.Require().NoError(err)
@@ -133,7 +134,7 @@ func (s *RetryTestSuite) TestConstantFailOnTimeout() {
 	startTime := time.Now()
 
 	// ACT
-	result, err := Try(fn, Const().WithInterval(10*time.Millisecond).WithTimeout(20*time.Millisecond))
+	result, err := Try(context.Background(), fn, Const().WithInterval(10*time.Millisecond).WithTimeout(20*time.Millisecond))
 
 	// ASSERT
 	s.Require().Error(err)
@@ -151,11 +152,69 @@ func (s *RetryTestSuite) TestBackoffFailOnTimeout() {
 	startTime := time.Now()
 
 	// ACT
-	result, err := Try(fn, Backoff().WithInterval(10*time.Millisecond).WithTimeout(60*time.Millisecond))
+	result, err := Try(context.Background(), fn, Backoff().WithInterval(10*time.Millisecond).WithTimeout(60*time.Millisecond))
 
 	// ASSERT
 	s.Require().Error(err)
 	s.Require().Equal(0, result)
 	s.Require().GreaterOrEqual(time.Since(startTime), 60*time.Millisecond)
 	s.Require().LessOrEqual(time.Since(startTime), 80*time.Millisecond)
+}
+
+func (s *RetryTestSuite) TestRetryContextCanceled() {
+	// ARRANGE
+	ctx, cancel := context.WithCancel(context.Background())
+	fn := func() (int, error) {
+		return someMethod(0)
+	}
+	startTime := time.Now()
+
+	// ACT
+	go func() {
+		time.Sleep(11 * time.Millisecond) // ensure that the first attempt is made before canceling the context
+		cancel()
+	}()
+	result, err := Try(ctx, fn, Const().WithInterval(10*time.Millisecond).WithTimeout(60*time.Millisecond))
+
+	// ASSERT
+	s.Require().Error(err)
+	s.Require().Equal(0, result)
+	s.Require().LessOrEqual(time.Since(startTime), 20*time.Millisecond)
+}
+
+func (s *RetryTestSuite) TestNoRetryPolicy() {
+	// ARRANGE
+	ctx, cancel := context.WithCancel(context.Background()) // To be able to end immediately after the first attempt
+	fn := func() (int, error) {
+		return someMethod(0)
+	}
+	startTime := time.Now()
+
+	// ACT
+	cancel()
+	result, err := Try(ctx, fn)
+
+	// ASSERT
+	s.Require().Error(err)
+	s.Require().Equal(0, result)
+	s.Require().LessOrEqual(time.Since(startTime), 20*time.Millisecond)
+}
+
+func (s *RetryTestSuite) TestSleep() {
+	// ARRANGE
+	ctx, cancel := context.WithCancel(context.Background())
+	startTime := time.Now()
+
+	// ACT
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+	err := Sleep(ctx, 20*time.Millisecond)
+
+	// ASSERT
+	s.Require().Error(err)
+	s.Require().Equal(context.Canceled, err)
+	s.Require().GreaterOrEqual(time.Since(startTime), 10*time.Millisecond)
+	s.Require().LessOrEqual(time.Since(startTime), 30*time.Millisecond)
 }
