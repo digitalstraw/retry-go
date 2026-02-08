@@ -171,7 +171,7 @@ func (s *RetryTestSuite) TestRetryContextCanceled() {
 
 	// ACT
 	go func() {
-		time.Sleep(11 * time.Millisecond) // ensure that the first attempt is made before canceling the context
+		time.Sleep(15 * time.Millisecond) // ensure that the first attempt is made before canceling the context
 		cancel()
 	}()
 	result, err := Try(ctx, fn, Const().WithInterval(10*time.Millisecond).WithTimeout(60*time.Millisecond))
@@ -207,7 +207,7 @@ func (s *RetryTestSuite) TestSleep() {
 
 	// ACT
 	go func() {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(15 * time.Millisecond)
 		cancel()
 	}()
 	err := Sleep(ctx, 20*time.Millisecond)

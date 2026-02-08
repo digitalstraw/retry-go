@@ -14,7 +14,7 @@ type TryPolicy interface {
 	WithTimeout(timeout time.Duration) TryPolicy
 }
 
-// Try - from app called as `re.Try(fn)` retries the given function until it succeeds or time is exceeded.
+// Try - from app called as `re.Try(ctx, fn)` - retries the given function until it succeeds or time is exceeded.
 // TryPolicy specifies how waiting is processed and the timeout.
 func Try[T any](ctx context.Context, fn func() (T, error), rp ...TryPolicy) (T, error) {
 	var zero T

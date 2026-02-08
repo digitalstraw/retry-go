@@ -107,5 +107,9 @@ This code is licensed under the MIT License. See the LICENSE file for details.
   - Added context parameter to `Try()` function. 
   - Immediate reaction to context cancellation implemented. 
   - `re.Sleep(ctx, duration)` function added to support context-aware sleeping.
+  - Improved processing when timeout is reached: 
+    - We run `fn` one last time before the timeout. 
+    - This ensures the final sleep period isn't wasted, especially in Backoff scenarios where that last wait could be long.
+
 - **v0.0.1** 
   - Initial release with basic retry functionality and default policies.
