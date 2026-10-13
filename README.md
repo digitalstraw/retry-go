@@ -118,6 +118,8 @@ Contributions are welcome! Please open an issue or submit a pull request on GitH
 This code is licensed under the MIT License. See the LICENSE file for details.
 
 # Changelog
+- **v1.1.0**
+  - Added re.Permanent to quit the cycle on permanent error.
 - **v1.0.0** 
   - Added context parameter to `Try()` function. 
   - Immediate reaction to context cancellation implemented. 
