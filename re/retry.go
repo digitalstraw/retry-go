@@ -16,6 +16,7 @@ type TryPolicy interface {
 
 // Try - from app called as `re.Try(ctx, fn)` - retries the given function until it succeeds or time is exceeded.
 // TryPolicy specifies how waiting is processed and the timeout.
+// An error fn returns wrapped in Permanent stops the retries at once; Try returns it unwrapped.
 func Try[T any](ctx context.Context, fn func() (T, error), rp ...TryPolicy) (T, error) {
 	var zero T
 	var err error
@@ -44,6 +45,9 @@ func Try[T any](ctx context.Context, fn func() (T, error), rp ...TryPolicy) (T, 
 		result, err = fn()
 		if err == nil {
 			return result, nil
+		}
+		if permanent, ok := asPermanent(err); ok {
+			return zero, permanent
 		}
 		toSleep = policy.SleepDuration(attempt, lastSleep)
 	}

@@ -3,6 +3,7 @@ package re
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -198,6 +199,51 @@ func (s *RetryTestSuite) TestNoRetryPolicy() {
 	s.Require().Error(err)
 	s.Require().Equal(0, result)
 	s.Require().LessOrEqual(time.Since(startTime), 20*time.Millisecond)
+}
+
+func (s *RetryTestSuite) TestPermanentStopsRetries() {
+	// ARRANGE
+	errFatal := errors.New("fatal")
+	attempts := 0
+	fn := func() (int, error) {
+		attempts++
+		return 7, Permanent(errFatal)
+	}
+	startTime := time.Now()
+
+	// ACT
+	result, err := Try(context.Background(), fn, Const().WithInterval(10*time.Millisecond).WithTimeout(60*time.Millisecond))
+
+	// ASSERT
+	s.Require().Same(errFatal, err)
+	s.Require().Equal(0, result)
+	s.Require().Equal(1, attempts)
+	s.Require().Less(time.Since(startTime), 10*time.Millisecond)
+}
+
+func (s *RetryTestSuite) TestPermanentAfterTransientFailures() {
+	// ARRANGE
+	errFatal := errors.New("fatal")
+	attempts := 0
+	fn := func() (int, error) {
+		attempts++
+		if attempts < 3 {
+			return 0, errors.New("transient")
+		}
+		return 0, fmt.Errorf("wrapped: %w", Permanent(errFatal))
+	}
+
+	// ACT
+	_, err := Try(context.Background(), fn, Const().WithInterval(5*time.Millisecond).WithTimeout(100*time.Millisecond))
+
+	// ASSERT
+	s.Require().Same(errFatal, err)
+	s.Require().Equal(3, attempts)
+}
+
+func (s *RetryTestSuite) TestPermanentNil() {
+	// ACT + ASSERT
+	s.Require().NoError(Permanent(nil))
 }
 
 func (s *RetryTestSuite) TestSleep() {

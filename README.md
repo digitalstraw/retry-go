@@ -41,6 +41,21 @@ fn := func() (*sql.DB, error) {
 db, err := re.Try(ctx, fn, re.Backoff().WithFactor(3).WithInterval(100*time.Millisecond).WithMaxInterval(60*time.Second).WithTimeout(5*time.Minute))
 ```
 
+## Stopping on a Permanent Error
+`Try` retries every error by default. Wrap an error a retry cannot fix in `re.Permanent` and `Try` stops at once,
+returning the original error unwrapped (`re.Permanent` may also sit deeper in a `%w` chain).
+
+```go
+user, err := re.Try(ctx, func() (*User, error) {
+    user, err := client.FetchUser(ctx, id)
+    if errors.Is(err, ErrNotFound) {
+        return nil, re.Permanent(err) // retrying will not make it exist
+    }
+    return user, err
+}, re.Backoff())
+// errors.Is(err, ErrNotFound) == true, no further attempts made
+```
+
 # Custom Retry Policies
 You can define your own retry policies by implementing the `re.TryPolicy` interface.
 
